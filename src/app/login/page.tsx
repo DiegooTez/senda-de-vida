@@ -15,8 +15,15 @@ export default async function LoginPage({
     'use server'
     const supabase = await createClient()
     const headersList = await headers()
+    // x-forwarded-host + x-forwarded-proto are set reliably by Vercel.
+    // NEXT_PUBLIC_SITE_URL takes precedence when explicitly configured.
+    const forwardedHost = headersList.get('x-forwarded-host')
+    const forwardedProto = headersList.get('x-forwarded-proto') ?? 'https'
     const origin =
-      headersList.get('origin') ?? `http://${headersList.get('host')}`
+      process.env.NEXT_PUBLIC_SITE_URL ??
+      (forwardedHost
+        ? `${forwardedProto}://${forwardedHost}`
+        : (headersList.get('origin') ?? 'http://localhost:3000'))
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
