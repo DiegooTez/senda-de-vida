@@ -36,6 +36,71 @@ function formatUSD(n: number) {
   }).format(n)
 }
 
+function CajaCard({
+  caja,
+  formatARS,
+  formatUSD,
+}: {
+  caja: Caja
+  formatARS: (n: number) => string
+  formatUSD: (n: number) => string
+}) {
+  const esPersonal = caja.tipo === 'personal'
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Barra de color superior */}
+      <div className={`h-1.5 ${esPersonal ? 'bg-violet-400' : 'bg-blue-400'}`} />
+
+      <div className="p-5">
+        {/* Encabezado */}
+        <div className="flex items-start justify-between gap-3 mb-5">
+          <h4 className="text-xl font-bold text-slate-800 leading-snug">{caja.nombre}</h4>
+          <span
+            className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-semibold ring-1 ${
+              esPersonal
+                ? 'bg-violet-50 text-violet-700 ring-violet-200'
+                : 'bg-blue-50 text-blue-700 ring-blue-200'
+            }`}
+          >
+            {esPersonal ? 'Personal' : 'Comunitaria'}
+          </span>
+        </div>
+
+        {/* Saldos */}
+        {caja.moneda === 'AMBAS' ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-slate-50 rounded-xl p-3">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                Pesos
+              </p>
+              <p className="text-lg font-bold text-slate-800 tabular-nums leading-tight">
+                {formatARS(caja.saldo_ars)}
+              </p>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-3">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                Dólares
+              </p>
+              <p className="text-lg font-bold text-slate-800 tabular-nums leading-tight">
+                {formatUSD(caja.saldo_usd)}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              {caja.moneda === 'ARS' ? 'Pesos' : 'Dólares'}
+            </p>
+            <p className="text-3xl font-bold text-slate-800 tabular-nums">
+              {caja.moneda === 'ARS' ? formatARS(caja.saldo_ars) : formatUSD(caja.saldo_usd)}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const {
@@ -86,7 +151,10 @@ export default async function DashboardPage() {
       } satisfies Caja
     })
     .filter((c): c is Caja => c !== null)
-    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+    .sort((a, b) => {
+      if (a.tipo !== b.tipo) return a.tipo === 'personal' ? -1 : 1
+      return a.nombre.localeCompare(b.nombre)
+    })
 
   const categorias: Categoria[] = (categoriasRaw ?? []).map((c) => ({
     id: c.id as string,
@@ -94,6 +162,10 @@ export default async function DashboardPage() {
     tipo: c.tipo as string | null,
     caja_tipo: c.caja_tipo as string | null,
   }))
+
+  const cajasPersonales = cajas.filter((c) => c.tipo === 'personal')
+  const cajasComunitarias = cajas.filter((c) => c.tipo === 'comunitaria')
+  const tieneAmbos = cajasPersonales.length > 0 && cajasComunitarias.length > 0
 
   const cajaMap = new Map(cajas.map((c) => [c.id, c]))
 
@@ -168,56 +240,43 @@ export default async function DashboardPage() {
 
         {/* Cajas */}
         <section>
-          <h3 className="text-base font-semibold text-slate-500 uppercase tracking-wide mb-3">
+          <h3 className="text-base font-semibold text-slate-500 uppercase tracking-wide mb-4">
             Cajas
           </h3>
+
           {cajas.length === 0 ? (
             <p className="text-slate-400 text-sm">No tenés acceso a ninguna caja.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {cajas.map((caja) => (
-                <div
-                  key={caja.id}
-                  className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-medium text-slate-500">{caja.nombre}</p>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        caja.tipo === 'comunitaria'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-purple-100 text-purple-700'
-                      }`}
-                    >
-                      {caja.tipo === 'comunitaria' ? 'Comunitaria' : 'Personal'}
-                    </span>
+            <div className="space-y-6">
+              {cajasPersonales.length > 0 && (
+                <div>
+                  {tieneAmbos && (
+                    <p className="text-xs font-semibold text-violet-600 uppercase tracking-wider mb-3">
+                      Mis cajas
+                    </p>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {cajasPersonales.map((caja) => (
+                      <CajaCard key={caja.id} caja={caja} formatARS={formatARS} formatUSD={formatUSD} />
+                    ))}
                   </div>
-
-                  {(caja.moneda === 'ARS' || caja.moneda === 'AMBAS') && (
-                    <div className={caja.moneda === 'AMBAS' ? 'mb-3' : ''}>
-                      {caja.moneda === 'AMBAS' && (
-                        <p className="text-xs text-slate-400 mb-0.5">ARS</p>
-                      )}
-                      <p className="text-3xl font-bold text-slate-800 tabular-nums">
-                        {formatARS(caja.saldo_ars)}
-                      </p>
-                    </div>
-                  )}
-
-                  {(caja.moneda === 'USD' || caja.moneda === 'AMBAS') && (
-                    <div>
-                      {caja.moneda === 'AMBAS' && (
-                        <p className="text-xs text-slate-400 mb-0.5">USD</p>
-                      )}
-                      <p
-                        className={`${caja.moneda === 'AMBAS' ? 'text-xl' : 'text-3xl'} font-bold text-slate-800 tabular-nums`}
-                      >
-                        {formatUSD(caja.saldo_usd)}
-                      </p>
-                    </div>
-                  )}
                 </div>
-              ))}
+              )}
+
+              {cajasComunitarias.length > 0 && (
+                <div>
+                  {tieneAmbos && (
+                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-3">
+                      Cajas comunitarias
+                    </p>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {cajasComunitarias.map((caja) => (
+                      <CajaCard key={caja.id} caja={caja} formatARS={formatARS} formatUSD={formatUSD} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </section>
