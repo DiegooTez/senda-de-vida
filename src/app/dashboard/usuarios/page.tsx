@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { RolSelector } from './RolSelector'
+import { PermisoManager } from './PermisoManager'
 
 type Perfil = {
   id: string
@@ -27,10 +28,10 @@ export default async function UsuariosPage() {
 
   if (perfilActual?.role !== 'admin') redirect('/dashboard')
 
-  const { data: perfiles, error: perfilesError } = await supabase
-    .from('profiles')
-    .select('id, email, full_name, role')
-    .order('email')
+  const [{ data: perfiles, error: perfilesError }, { data: permisos }] = await Promise.all([
+    supabase.from('profiles').select('id, email, full_name, role').order('email'),
+    supabase.from('usuarios_permitidos').select('id, email').order('creado_at', { ascending: true }),
+  ])
 
   async function signOut() {
     'use server'
@@ -149,6 +150,15 @@ export default async function UsuariosPage() {
               </table>
             </div>
           )}
+        </div>
+        <div className="mt-10">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-slate-800">Lista blanca de acceso</h2>
+            <p className="mt-1 text-slate-500 text-sm">
+              Solo pueden ingresar a la app los correos que estén en esta lista.
+            </p>
+          </div>
+          <PermisoManager permisos={permisos ?? []} />
         </div>
       </main>
     </div>

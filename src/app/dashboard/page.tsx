@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { NuevaTransaccionModal } from './NuevaTransaccionModal'
+import { TransaccionesHistorial } from './TransaccionesHistorial'
 
 type Caja = {
   id: string
@@ -29,11 +30,6 @@ function formatSaldo(saldo: number, nombre: string) {
   }).format(saldo)
 }
 
-function formatFecha(fecha: string) {
-  const [year, month, day] = fecha.split('-')
-  return `${day}/${month}/${year}`
-}
-
 export default async function DashboardPage() {
   const supabase = await createClient()
   const {
@@ -55,9 +51,8 @@ export default async function DashboardPage() {
       supabase.from('categorias').select('id, nombre, tipo').order('nombre'),
       supabase
         .from('transacciones')
-        .select('id, tipo, monto, descripcion, fecha, cajas(nombre), categorias(nombre)')
-        .order('fecha', { ascending: false })
-        .limit(10),
+        .select('id, tipo, monto, descripcion, fecha, caja_id, categoria_id, cajas(nombre), categorias(nombre)')
+        .order('fecha', { ascending: false }),
     ])
 
   const esAdmin = perfilActual?.role === 'admin'
@@ -68,6 +63,8 @@ export default async function DashboardPage() {
     monto: t.monto as number,
     descripcion: t.descripcion as string | null,
     fecha: t.fecha as string,
+    caja_id: t.caja_id as string,
+    categoria_id: t.categoria_id as string | null,
     cajaNombre: (Array.isArray(t.cajas) ? t.cajas[0]?.nombre : null) as string | null,
     categoriaNombre: (Array.isArray(t.categorias) ? t.categorias[0]?.nombre : null) as string | null,
   }))
@@ -153,93 +150,12 @@ export default async function DashboardPage() {
           />
         </div>
 
-        {/* Historial */}
-        <section>
-          <h3 className="text-base font-semibold text-slate-500 uppercase tracking-wide mb-3">
-            Últimas transacciones
-          </h3>
-
-          {rows.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 py-16 text-center">
-              <p className="text-slate-400 text-sm">
-                Todavía no hay transacciones registradas
-              </p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50">
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">
-                        Fecha
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">
-                        Caja
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">
-                        Categoría
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">
-                        Tipo
-                      </th>
-                      <th className="px-4 py-3 text-right font-semibold text-slate-600">
-                        Monto
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">
-                        Descripción
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((t) => (
-                      <tr
-                        key={t.id}
-                        className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors"
-                      >
-                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
-                          {formatFecha(t.fecha)}
-                        </td>
-                        <td className="px-4 py-3 text-slate-700">
-                          {t.cajaNombre ?? '—'}
-                        </td>
-                        <td className="px-4 py-3 text-slate-700">
-                          {t.categoriaNombre ?? '—'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              t.tipo === 'ingreso'
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-red-100 text-red-700'
-                            }`}
-                          >
-                            {t.tipo === 'ingreso' ? 'Ingreso' : 'Egreso'}
-                          </span>
-                        </td>
-                        <td
-                          className={`px-4 py-3 text-right font-semibold tabular-nums whitespace-nowrap ${
-                            t.tipo === 'ingreso'
-                              ? 'text-emerald-600'
-                              : 'text-red-600'
-                          }`}
-                        >
-                          {t.tipo === 'ingreso' ? '+' : '−'}
-                          {new Intl.NumberFormat('es-AR', {
-                            minimumFractionDigits: 2,
-                          }).format(t.monto)}
-                        </td>
-                        <td className="px-4 py-3 text-slate-500 max-w-xs truncate">
-                          {t.descripcion ?? '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </section>
+        <TransaccionesHistorial
+          rows={rows}
+          cajas={cajas ?? []}
+          categorias={(categorias ?? []) as Categoria[]}
+          esAdmin={esAdmin}
+        />
       </main>
     </div>
   )

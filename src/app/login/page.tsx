@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
@@ -38,6 +39,18 @@ export default async function LoginPage({
     })
 
     if (error) redirect('/login?error=' + encodeURIComponent(error.message))
+
+    const { data: permitido } = await supabase
+      .from('usuarios_permitidos')
+      .select('id')
+      .eq('email', email.toLowerCase())
+      .maybeSingle()
+
+    if (!permitido) {
+      await supabase.auth.signOut()
+      redirect('/login?error=' + encodeURIComponent('No tenés acceso. Contactá al administrador.'))
+    }
+
     redirect('/dashboard')
   }
 
@@ -143,6 +156,15 @@ export default async function LoginPage({
             Iniciar sesión
           </button>
         </form>
+
+        <div className="mt-4 text-center">
+          <Link
+            href="/login/reset"
+            className="text-sm text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
       </div>
     </div>
   )

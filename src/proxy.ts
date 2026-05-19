@@ -33,11 +33,24 @@ export async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname
 
-  if (path.startsWith('/dashboard') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // Check whitelist once for routes that need it
+  let isWhitelisted: boolean | null = null
+  if (user && (path.startsWith('/dashboard') || path === '/login')) {
+    const { data } = await supabase
+      .from('usuarios_permitidos')
+      .select('id')
+      .eq('email', (user.email ?? '').toLowerCase())
+      .maybeSingle()
+    isWhitelisted = !!data
+  }
+
+  if (path.startsWith('/dashboard')) {
+    if (!user) return NextResponse.redirect(new URL('/login', request.url))
+    if (isWhitelisted === false) return NextResponse.redirect(new URL('/sin-acceso', request.url))
   }
 
   if (path === '/login' && user) {
+    if (isWhitelisted === false) return NextResponse.redirect(new URL('/sin-acceso', request.url))
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
