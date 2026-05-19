@@ -5,23 +5,33 @@ import { useRouter } from 'next/navigation'
 import { EditarTransaccionModal } from './EditarTransaccionModal'
 
 type Caja = { id: string; nombre: string }
-type Categoria = { id: string; nombre: string; tipo?: string | null }
+type Categoria = { id: string; nombre: string; tipo?: string | null; caja_tipo?: string | null }
 
 type Row = {
   id: string
   tipo: 'ingreso' | 'egreso'
+  moneda: 'ARS' | 'USD'
   monto: number
   descripcion: string | null
   fecha: string
   caja_id: string
   categoria_id: string | null
   cajaNombre: string | null
+  cajaTipo: string | null
   categoriaNombre: string | null
 }
 
 function formatFecha(fecha: string) {
   const [year, month, day] = fecha.split('-')
   return `${day}/${month}/${year}`
+}
+
+function formatMonto(monto: number, moneda: 'ARS' | 'USD') {
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: moneda,
+    minimumFractionDigits: 2,
+  }).format(monto)
 }
 
 export function TransaccionesHistorial({
@@ -38,11 +48,13 @@ export function TransaccionesHistorial({
   const router = useRouter()
   const [filtroCaja, setFiltroCaja] = useState<string>('all')
   const [filtroTipo, setFiltroTipo] = useState<string>('all')
+  const [filtroMoneda, setFiltroMoneda] = useState<string>('all')
   const [editando, setEditando] = useState<Row | null>(null)
 
   const rowsFiltradas = rows.filter((r) => {
     if (filtroCaja !== 'all' && r.caja_id !== filtroCaja) return false
     if (filtroTipo !== 'all' && r.tipo !== filtroTipo) return false
+    if (filtroMoneda !== 'all' && r.moneda !== filtroMoneda) return false
     return true
   })
 
@@ -95,6 +107,29 @@ export function TransaccionesHistorial({
                 onClick={() => setFiltroTipo(value)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   filtroTipo === value
+                    ? 'bg-slate-800 text-white'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2 py-1">
+            <span className="text-xs text-slate-400 mr-1">Moneda:</span>
+            {(
+              [
+                { value: 'all', label: 'Todas' },
+                { value: 'ARS', label: 'ARS' },
+                { value: 'USD', label: 'USD' },
+              ] as const
+            ).map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setFiltroMoneda(value)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  filtroMoneda === value
                     ? 'bg-slate-800 text-white'
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
@@ -157,9 +192,7 @@ export function TransaccionesHistorial({
                       }`}
                     >
                       {t.tipo === 'ingreso' ? '+' : '−'}
-                      {new Intl.NumberFormat('es-AR', {
-                        minimumFractionDigits: 2,
-                      }).format(t.monto)}
+                      {formatMonto(t.monto, t.moneda)}
                     </td>
                     <td className="px-4 py-3 text-slate-500 max-w-xs truncate">
                       {t.descripcion ?? '—'}

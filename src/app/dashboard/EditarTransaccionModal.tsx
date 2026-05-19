@@ -3,15 +3,17 @@
 import { useActionState, useEffect, useState } from 'react'
 import { editarTransaccion, type EditarTransaccionState } from './actions'
 
-type Categoria = { id: string; nombre: string; tipo?: string | null }
+type Categoria = { id: string; nombre: string; tipo?: string | null; caja_tipo?: string | null }
 
 type Transaccion = {
   id: string
   tipo: 'ingreso' | 'egreso'
+  moneda: 'ARS' | 'USD'
   monto: number
   descripcion: string | null
   categoria_id: string | null
   cajaNombre: string | null
+  cajaTipo: string | null
 }
 
 function EditarForm({
@@ -31,7 +33,11 @@ function EditarForm({
   )
   const [tipo, setTipo] = useState<'ingreso' | 'egreso'>(transaccion.tipo)
 
-  const categoriasFiltradas = categorias.filter((c) => !c.tipo || c.tipo === tipo)
+  const categoriasFiltradas = categorias.filter(
+    (c) =>
+      (!c.tipo || c.tipo === tipo) &&
+      (!c.caja_tipo || c.caja_tipo === transaccion.cajaTipo)
+  )
 
   useEffect(() => {
     if (state.success) {
@@ -83,11 +89,10 @@ function EditarForm({
         <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
         <select
           name="categoria_id"
-          required
           defaultValue={transaccion.categoria_id ?? ''}
           className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
-          <option value="">Seleccioná una categoría</option>
+          <option value="">Sin categoría</option>
           {categoriasFiltradas.map((c) => (
             <option key={c.id} value={c.id}>
               {c.nombre}
@@ -159,9 +164,14 @@ export function EditarTransaccionModal({
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-xl font-bold text-slate-800">Editar transacción</h3>
-            {transaccion.cajaNombre && (
-              <p className="text-sm text-slate-500 mt-0.5">Caja: {transaccion.cajaNombre}</p>
-            )}
+            <div className="flex items-center gap-2 mt-0.5">
+              {transaccion.cajaNombre && (
+                <p className="text-sm text-slate-500">Caja: {transaccion.cajaNombre}</p>
+              )}
+              <span className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded font-medium">
+                {transaccion.moneda}
+              </span>
+            </div>
           </div>
           <button
             onClick={onClose}

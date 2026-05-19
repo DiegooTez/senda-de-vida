@@ -3,10 +3,20 @@
 import { useActionState, useEffect, useState } from 'react'
 import { crearTransaccion, type TransaccionState } from './actions'
 
-type Caja = { id: string; nombre: string }
-type Categoria = { id: string; nombre: string; tipo?: string | null }
+type Caja = {
+  id: string
+  nombre: string
+  tipo: string
+  moneda: 'ARS' | 'USD' | 'AMBAS'
+}
 
-// Desmonta en cada apertura → useActionState siempre arranca limpio
+type Categoria = {
+  id: string
+  nombre: string
+  tipo?: string | null
+  caja_tipo?: string | null
+}
+
 function TransaccionForm({
   cajas,
   categorias,
@@ -21,11 +31,21 @@ function TransaccionForm({
     {}
   )
   const [tipo, setTipo] = useState<'ingreso' | 'egreso'>('ingreso')
+  const [cajaId, setCajaId] = useState<string>(cajas[0]?.id ?? '')
+  const [moneda, setMoneda] = useState<'ARS' | 'USD'>('ARS')
 
   const today = new Date().toISOString().split('T')[0]
 
+  const cajaSeleccionada = cajas.find((c) => c.id === cajaId)
+  const monedaEfectiva: 'ARS' | 'USD' =
+    cajaSeleccionada?.moneda === 'AMBAS'
+      ? moneda
+      : ((cajaSeleccionada?.moneda as 'ARS' | 'USD' | undefined) ?? 'ARS')
+
   const categoriasFiltradas = categorias.filter(
-    (c) => !c.tipo || c.tipo === tipo
+    (c) =>
+      (!c.tipo || c.tipo === tipo) &&
+      (!c.caja_tipo || c.caja_tipo === cajaSeleccionada?.tipo)
   )
 
   useEffect(() => {
@@ -40,14 +60,16 @@ function TransaccionForm({
         </div>
       )}
 
+      <input type="hidden" name="moneda" value={monedaEfectiva} />
+
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Caja
-          </label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Caja</label>
           <select
             name="caja_id"
             required
+            value={cajaId}
+            onChange={(e) => setCajaId(e.target.value)}
             className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           >
             {cajas.map((c) => (
@@ -59,9 +81,7 @@ function TransaccionForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Fecha
-          </label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Fecha</label>
           <input
             type="date"
             name="fecha"
@@ -72,10 +92,38 @@ function TransaccionForm({
         </div>
       </div>
 
+      {cajaSeleccionada?.moneda === 'AMBAS' && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Moneda</label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMoneda('ARS')}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
+                moneda === 'ARS'
+                  ? 'bg-slate-800 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              ARS $
+            </button>
+            <button
+              type="button"
+              onClick={() => setMoneda('USD')}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
+                moneda === 'USD'
+                  ? 'bg-slate-800 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              USD $
+            </button>
+          </div>
+        </div>
+      )}
+
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Tipo
-        </label>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
         <div className="flex gap-2">
           <button
             type="button"
@@ -104,15 +152,12 @@ function TransaccionForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Categoría
-        </label>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
         <select
           name="categoria_id"
-          required
           className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
-          <option value="">Seleccioná una categoría</option>
+          <option value="">Sin categoría</option>
           {categoriasFiltradas.map((c) => (
             <option key={c.id} value={c.id}>
               {c.nombre}
@@ -122,9 +167,7 @@ function TransaccionForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Monto
-        </label>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Monto</label>
         <input
           type="number"
           name="monto"
@@ -138,8 +181,7 @@ function TransaccionForm({
 
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">
-          Descripción{' '}
-          <span className="text-slate-400 font-normal">(opcional)</span>
+          Descripción <span className="text-slate-400 font-normal">(opcional)</span>
         </label>
         <input
           type="text"
@@ -154,7 +196,7 @@ function TransaccionForm({
           Nota <span className="text-slate-400 font-normal">(opcional)</span>
         </label>
         <textarea
-          name="nota_libre"
+          name="descripcion_custom"
           rows={2}
           placeholder="Nota adicional..."
           className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
@@ -203,9 +245,7 @@ export function NuevaTransaccionModal({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-slate-800">
-                Nueva transacción
-              </h3>
+              <h3 className="text-xl font-bold text-slate-800">Nueva transacción</h3>
               <button
                 onClick={() => setOpen(false)}
                 className="text-slate-400 hover:text-slate-700 text-xl leading-none cursor-pointer w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
@@ -214,7 +254,6 @@ export function NuevaTransaccionModal({
               </button>
             </div>
 
-            {/* TransaccionForm desmonta cuando open=false, reseteando el estado del action */}
             <TransaccionForm
               cajas={cajas}
               categorias={categorias}
