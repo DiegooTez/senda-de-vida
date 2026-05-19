@@ -47,8 +47,9 @@ export default async function DashboardPage() {
     user.user_metadata?.name ??
     user.email
 
-  const [{ data: cajas }, { data: categorias }, { data: transacciones }] =
+  const [{ data: perfilActual }, { data: cajas }, { data: categorias }, { data: transacciones }] =
     await Promise.all([
+      supabase.from('profiles').select('role').eq('id', user.id).single(),
       supabase.from('cajas').select('id, nombre, saldo').order('nombre'),
       supabase.from('categorias').select('id, nombre, tipo').order('nombre'),
       supabase
@@ -57,6 +58,8 @@ export default async function DashboardPage() {
         .order('fecha', { ascending: false })
         .limit(10),
     ])
+
+  const esAdmin = perfilActual?.role === 'admin'
 
   const rows = (transacciones ?? []).map((t) => ({
     id: t.id as string,
@@ -79,9 +82,19 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">✝</span>
-            <h1 className="text-xl font-bold text-slate-800">Senda de Vida</h1>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">✝</span>
+              <h1 className="text-xl font-bold text-slate-800">Senda de Vida</h1>
+            </div>
+            {esAdmin && (
+              <a
+                href="/dashboard/usuarios"
+                className="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Usuarios
+              </a>
+            )}
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-slate-500 hidden sm:block">{name}</span>
