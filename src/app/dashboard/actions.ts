@@ -42,6 +42,7 @@ export async function crearTransaccion(
     descripcion,
     nota_libre,
     fecha,
+    creado_por: user.id,
   })
 
   if (insertError) return { error: insertError.message }
