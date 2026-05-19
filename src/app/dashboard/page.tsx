@@ -14,15 +14,6 @@ type Categoria = {
   tipo: string | null
 }
 
-type Transaccion = {
-  id: string
-  tipo: 'ingreso' | 'egreso'
-  monto: number
-  descripcion: string | null
-  fecha: string
-  cajas: { nombre: string } | null
-  categorias: { nombre: string } | null
-}
 
 function formatSaldo(saldo: number, nombre: string) {
   const esDolar =
@@ -66,6 +57,16 @@ export default async function DashboardPage() {
         .order('fecha', { ascending: false })
         .limit(10),
     ])
+
+  const rows = (transacciones ?? []).map((t) => ({
+    id: t.id as string,
+    tipo: t.tipo as 'ingreso' | 'egreso',
+    monto: t.monto as number,
+    descripcion: t.descripcion as string | null,
+    fecha: t.fecha as string,
+    cajaNombre: (Array.isArray(t.cajas) ? t.cajas[0]?.nombre : null) as string | null,
+    categoriaNombre: (Array.isArray(t.categorias) ? t.categorias[0]?.nombre : null) as string | null,
+  }))
 
   async function signOut() {
     'use server'
@@ -138,7 +139,7 @@ export default async function DashboardPage() {
             Últimas transacciones
           </h3>
 
-          {(transacciones ?? []).length === 0 ? (
+          {rows.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 py-16 text-center">
               <p className="text-slate-400 text-sm">
                 Todavía no hay transacciones registradas
@@ -171,7 +172,7 @@ export default async function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(transacciones as Transaccion[]).map((t) => (
+                    {rows.map((t) => (
                       <tr
                         key={t.id}
                         className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors"
@@ -180,10 +181,10 @@ export default async function DashboardPage() {
                           {formatFecha(t.fecha)}
                         </td>
                         <td className="px-4 py-3 text-slate-700">
-                          {t.cajas?.nombre ?? '—'}
+                          {t.cajaNombre ?? '—'}
                         </td>
                         <td className="px-4 py-3 text-slate-700">
-                          {t.categorias?.nombre ?? '—'}
+                          {t.categoriaNombre ?? '—'}
                         </td>
                         <td className="px-4 py-3">
                           <span

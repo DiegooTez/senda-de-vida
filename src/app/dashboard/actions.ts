@@ -24,7 +24,7 @@ export async function crearTransaccion(
   const categoria_id = formData.get('categoria_id') as string
   const monto = parseFloat(formData.get('monto') as string)
   const descripcion = (formData.get('descripcion') as string) || null
-  const nota = (formData.get('nota') as string) || null
+  const nota_libre = (formData.get('nota_libre') as string) || null
   const fecha = formData.get('fecha') as string
 
   if (!caja_id || !tipo || !categoria_id || !fecha) {
@@ -40,7 +40,7 @@ export async function crearTransaccion(
     categoria_id,
     monto,
     descripcion,
-    nota,
+    nota_libre,
     fecha,
   })
 
