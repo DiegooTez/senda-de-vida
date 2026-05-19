@@ -66,6 +66,7 @@ export default async function DashboardPage() {
         .select(
           'id, tipo, moneda, monto, descripcion, fecha, caja_id, categoria_id, cajas(nombre), categorias_transaccion(nombre)'
         )
+        .is('eliminado_en', null)
         .order('fecha', { ascending: false }),
     ])
 

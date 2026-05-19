@@ -158,3 +158,68 @@ export async function editarTransaccion(
   revalidatePath('/dashboard')
   return { success: true }
 }
+
+export type EliminarTransaccionState = {
+  error?: string
+  success?: boolean
+}
+
+export async function eliminarTransaccion(
+  _prevState: EliminarTransaccionState,
+  formData: FormData
+): Promise<EliminarTransaccionState> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autorizado' }
+
+  const { data: perfil } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (perfil?.role !== 'admin') return { error: 'No autorizado' }
+
+  const transaccion_id = formData.get('transaccion_id') as string
+
+  const { data: tx, error: txError } = await supabase
+    .from('transacciones')
+    .select('tipo, monto, moneda, caja_id, eliminado_en')
+    .eq('id', transaccion_id)
+    .single()
+
+  if (txError || !tx) return { error: 'Transacción no encontrada' }
+  if (tx.eliminado_en) return { error: 'La transacción ya fue eliminada' }
+
+  const { data: caja, error: cajaError } = await supabase
+    .from('cajas')
+    .select('saldo_ars, saldo_usd')
+    .eq('id', tx.caja_id)
+    .single()
+
+  if (cajaError || !caja) return { error: 'Error al obtener el saldo de la caja' }
+
+  const delta = tx.tipo === 'ingreso' ? -Number(tx.monto) : Number(tx.monto)
+  const nuevoSaldoArs =
+    tx.moneda === 'ARS' ? Number(caja.saldo_ars) + delta : Number(caja.saldo_ars)
+  const nuevoSaldoUsd =
+    tx.moneda === 'USD' ? Number(caja.saldo_usd) + delta : Number(caja.saldo_usd)
+
+  const { error: updateCajaError } = await supabase
+    .from('cajas')
+    .update(tx.moneda === 'ARS' ? { saldo_ars: nuevoSaldoArs } : { saldo_usd: nuevoSaldoUsd })
+    .eq('id', tx.caja_id)
+
+  if (updateCajaError) return { error: updateCajaError.message }
+
+  const { error: softDeleteError } = await supabase
+    .from('transacciones')
+    .update({ eliminado_en: new Date().toISOString(), eliminado_por: user.id })
+    .eq('id', transaccion_id)
+
+  if (softDeleteError) return { error: softDeleteError.message }
+
+  revalidatePath('/dashboard')
+  return { success: true }
+}

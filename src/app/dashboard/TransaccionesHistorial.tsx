@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useActionState, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { EditarTransaccionModal } from './EditarTransaccionModal'
+import { eliminarTransaccion, type EliminarTransaccionState } from './actions'
 
 type Caja = { id: string; nombre: string }
 type Categoria = { id: string; nombre: string; tipo?: string | null; caja_tipo?: string | null }
@@ -19,6 +20,44 @@ type Row = {
   cajaNombre: string | null
   cajaTipo: string | null
   categoriaNombre: string | null
+}
+
+function EliminarForm({
+  transaccionId,
+  onCancel,
+}: {
+  transaccionId: string
+  onCancel: () => void
+}) {
+  const [state, action, pending] = useActionState<EliminarTransaccionState, FormData>(
+    eliminarTransaccion,
+    {}
+  )
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {state.error ? (
+        <span className="text-xs text-red-500">{state.error}</span>
+      ) : (
+        <span className="text-xs text-slate-500">¿Eliminar?</span>
+      )}
+      <form action={action}>
+        <input type="hidden" name="transaccion_id" value={transaccionId} />
+        <button
+          type="submit"
+          disabled={pending}
+          className="px-2.5 py-1 text-xs bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white rounded-lg transition-colors cursor-pointer font-medium"
+        >
+          {pending ? '...' : 'Sí'}
+        </button>
+      </form>
+      <button
+        onClick={onCancel}
+        className="px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-slate-200"
+      >
+        No
+      </button>
+    </div>
+  )
 }
 
 function formatFecha(fecha: string) {
@@ -50,6 +89,7 @@ export function TransaccionesHistorial({
   const [filtroTipo, setFiltroTipo] = useState<string>('all')
   const [filtroMoneda, setFiltroMoneda] = useState<string>('all')
   const [editando, setEditando] = useState<Row | null>(null)
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
 
   const rowsFiltradas = rows.filter((r) => {
     if (filtroCaja !== 'all' && r.caja_id !== filtroCaja) return false
@@ -199,12 +239,27 @@ export function TransaccionesHistorial({
                     </td>
                     {esAdmin && (
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => setEditando(t)}
-                          className="px-2.5 py-1 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-slate-200"
-                        >
-                          Editar
-                        </button>
+                        {confirmandoId === t.id ? (
+                          <EliminarForm
+                            transaccionId={t.id}
+                            onCancel={() => setConfirmandoId(null)}
+                          />
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setEditando(t)}
+                              className="px-2.5 py-1 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-slate-200"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => setConfirmandoId(t.id)}
+                              className="px-2.5 py-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer border border-red-200"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        )}
                       </td>
                     )}
                   </tr>
