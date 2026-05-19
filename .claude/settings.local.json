@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const p = require\\('./node_modules/next/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(Get-Content \"C:\\\\Users\\\\v_rut\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--Usuarios-benit-Senda-de-Vida-senda-de-vida\\\\3511cf6e-e7c9-4eed-9dca-35bc2107fc9c\\\\tasks\\\\b2ztmo2h8.output\")"
+    ]
+  }
+}
