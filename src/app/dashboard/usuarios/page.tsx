@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { RolSelector } from './RolSelector'
@@ -44,7 +45,13 @@ export default async function UsuariosPage() {
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <span className="text-xl">✝</span>
+              <Image
+                src="/logo.jpeg"
+                alt="Senda de Vida"
+                width={32}
+                height={32}
+                className="rounded-lg object-contain"
+              />
               <span className="text-xl font-bold text-slate-800">Senda de Vida</span>
             </div>
             <nav className="flex items-center gap-1">

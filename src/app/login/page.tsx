@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
@@ -44,7 +45,16 @@ export default async function LoginPage({
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="text-4xl mb-3">✝</div>
+          <div className="flex justify-center mb-3">
+            <Image
+              src="/logo.jpeg"
+              alt="Senda de Vida"
+              width={96}
+              height={96}
+              className="rounded-xl object-contain"
+              priority
+            />
+          </div>
           <h1 className="text-3xl font-bold text-slate-800">Senda de Vida</h1>
           <p className="text-slate-500 mt-2 text-sm">Sistema de administración</p>
         </div>
