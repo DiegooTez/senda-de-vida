@@ -35,7 +35,7 @@ export async function proxy(request: NextRequest) {
 
   // Check whitelist once for routes that need it
   let isWhitelisted: boolean | null = null
-  if (user && (path.startsWith('/dashboard') || path === '/login')) {
+  if (user && (path.startsWith('/dashboard') || path === '/login' || path === '/registro')) {
     const { data } = await supabase
       .from('usuarios_permitidos')
       .select('id')
@@ -49,7 +49,7 @@ export async function proxy(request: NextRequest) {
     if (isWhitelisted === false) return NextResponse.redirect(new URL('/sin-acceso', request.url))
   }
 
-  if (path === '/login' && user) {
+  if ((path === '/login' || path === '/registro') && user) {
     if (isWhitelisted === false) return NextResponse.redirect(new URL('/sin-acceso', request.url))
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }

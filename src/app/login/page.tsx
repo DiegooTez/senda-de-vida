@@ -157,13 +157,24 @@ export default async function LoginPage({
           </button>
         </form>
 
-        <div className="mt-4 text-center">
-          <Link
-            href="/login/reset"
-            className="text-sm text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            ¿Olvidaste tu contraseña?
-          </Link>
+        <div className="mt-4 text-center space-y-2">
+          <div>
+            <Link
+              href="/login/reset"
+              className="text-sm text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
+          <div>
+            <Link
+              href="/registro"
+              className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              ¿No tenés cuenta?{' '}
+              <span className="font-medium text-blue-600">Registrate</span>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
