@@ -15,9 +15,7 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
+          getAll() { return cookieStore.getAll() },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
@@ -30,15 +28,15 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser()
 
       if (user?.email) {
         const admin = createAdminClient()
+
+        // 1. Verificar whitelist
         const { data: permitido } = await admin
           .from('usuarios_permitidos')
-          .select('id')
+          .select('id, nombre, rol')
           .eq('email', user.email.toLowerCase())
           .eq('activo', true)
           .maybeSingle()
@@ -46,11 +44,31 @@ export async function GET(request: NextRequest) {
         if (!permitido) {
           await supabase.auth.signOut()
           return NextResponse.redirect(
-            new URL(
-              '/login?error=' + encodeURIComponent('No tenés acceso. Contactá al administrador.'),
-              origin
-            )
+            new URL('/login?error=' + encodeURIComponent('No tenés acceso. Contactá al administrador.'), origin)
           )
+        }
+
+        // 2. Crear perfil si no existe
+        const { data: perfilExistente } = await admin
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (!perfilExistente) {
+          const nombre =
+            user.user_metadata?.full_name ??
+            user.user_metadata?.name ??
+            permitido.nombre ??
+            user.email
+
+          await admin.from('profiles').insert({
+            id: user.id,
+            email: user.email.toLowerCase(),
+            nombre,
+            rol: permitido.rol ?? 'user',
+            activo: true,
+          })
         }
       }
 

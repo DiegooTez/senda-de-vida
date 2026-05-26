@@ -6,7 +6,9 @@
       "Bash(npm run *)",
       "Bash(Get-Content \"C:\\\\Users\\\\v_rut\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--Usuarios-benit-Senda-de-Vida-senda-de-vida\\\\3511cf6e-e7c9-4eed-9dca-35bc2107fc9c\\\\tasks\\\\b2ztmo2h8.output\")",
       "Bash(Get-ChildItem -Path \"d:\\\\Usuarios\\\\benit\\\\Senda de Vida\\\\senda-de-vida\" -Recurse -Force)",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(ls \"d:\\\\Usuarios\\\\benit\\\\Senda de Vida\\\\senda-de-vida\\\\\" | grep -i middleware)",
+      "Read(//d/Usuarios/benit/Senda de Vida/**)"
     ]
   }
 }
