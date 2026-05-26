@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export default async function LoginPage({
   searchParams,
@@ -42,7 +43,8 @@ export default async function LoginPage({
 
     if (error) redirect('/login?error=' + encodeURIComponent(error.message))
 
-    const { data: permitido } = await supabase
+    const admin = createAdminClient()
+    const { data: permitido } = await admin
       .from('usuarios_permitidos')
       .select('id')
       .eq('email', email.toLowerCase())

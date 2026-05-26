@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -34,7 +35,8 @@ export async function GET(request: NextRequest) {
       } = await supabase.auth.getUser()
 
       if (user?.email) {
-        const { data: permitido } = await supabase
+        const admin = createAdminClient()
+        const { data: permitido } = await admin
           .from('usuarios_permitidos')
           .select('id')
           .eq('email', user.email.toLowerCase())
