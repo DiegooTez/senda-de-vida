@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
           .from('usuarios_permitidos')
           .select('id')
           .eq('email', user.email.toLowerCase())
+          .eq('activo', true)
           .maybeSingle()
 
         if (!permitido) {

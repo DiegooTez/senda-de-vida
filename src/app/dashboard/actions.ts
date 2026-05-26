@@ -90,18 +90,19 @@ export async function editarTransaccion(
 
   const { data: perfil } = await supabase
     .from('profiles')
-    .select('role')
+    .select('rol')
     .eq('id', user.id)
     .single()
-  if (perfil?.role !== 'admin') return { error: 'No autorizado' }
+  if (perfil?.rol !== 'admin') return { error: 'No autorizado' }
 
   const transaccion_id = formData.get('transaccion_id') as string
   const tipo = formData.get('tipo') as 'ingreso' | 'egreso'
   const categoria_id = (formData.get('categoria_id') as string) || null
   const monto = parseFloat(formData.get('monto') as string)
   const descripcion = (formData.get('descripcion') as string) || null
+  const fecha = (formData.get('fecha') as string) || null
 
-  if (!transaccion_id || !tipo) return { error: 'Datos incompletos' }
+  if (!transaccion_id || !tipo || !fecha) return { error: 'Datos incompletos' }
   if (isNaN(monto) || monto <= 0) return { error: 'El monto debe ser mayor a 0' }
 
   const { data: tx, error: txError } = await supabase
@@ -120,7 +121,6 @@ export async function editarTransaccion(
 
   if (cajaError || !caja) return { error: 'Error al obtener el saldo de la caja' }
 
-  // Revertir efecto anterior y aplicar nuevo sobre la moneda de la transacción
   const deltaAnterior = tx.tipo === 'ingreso' ? Number(tx.monto) : -Number(tx.monto)
   const deltaNuevo = tipo === 'ingreso' ? monto : -monto
 
@@ -141,6 +141,7 @@ export async function editarTransaccion(
       categoria_id,
       monto,
       descripcion,
+      fecha,
       saldo_posterior_ars: nuevoSaldoArs,
       saldo_posterior_usd: nuevoSaldoUsd,
     })
@@ -154,71 +155,6 @@ export async function editarTransaccion(
     .eq('id', tx.caja_id)
 
   if (updateCajaError) return { error: updateCajaError.message }
-
-  revalidatePath('/dashboard')
-  return { success: true }
-}
-
-export type EliminarTransaccionState = {
-  error?: string
-  success?: boolean
-}
-
-export async function eliminarTransaccion(
-  _prevState: EliminarTransaccionState,
-  formData: FormData
-): Promise<EliminarTransaccionState> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'No autorizado' }
-
-  const { data: perfil } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-  if (perfil?.role !== 'admin') return { error: 'No autorizado' }
-
-  const transaccion_id = formData.get('transaccion_id') as string
-
-  const { data: tx, error: txError } = await supabase
-    .from('transacciones')
-    .select('tipo, monto, moneda, caja_id, eliminado_en')
-    .eq('id', transaccion_id)
-    .single()
-
-  if (txError || !tx) return { error: 'Transacción no encontrada' }
-  if (tx.eliminado_en) return { error: 'La transacción ya fue eliminada' }
-
-  const { data: caja, error: cajaError } = await supabase
-    .from('cajas')
-    .select('saldo_ars, saldo_usd')
-    .eq('id', tx.caja_id)
-    .single()
-
-  if (cajaError || !caja) return { error: 'Error al obtener el saldo de la caja' }
-
-  const delta = tx.tipo === 'ingreso' ? -Number(tx.monto) : Number(tx.monto)
-  const nuevoSaldoArs =
-    tx.moneda === 'ARS' ? Number(caja.saldo_ars) + delta : Number(caja.saldo_ars)
-  const nuevoSaldoUsd =
-    tx.moneda === 'USD' ? Number(caja.saldo_usd) + delta : Number(caja.saldo_usd)
-
-  const { error: updateCajaError } = await supabase
-    .from('cajas')
-    .update(tx.moneda === 'ARS' ? { saldo_ars: nuevoSaldoArs } : { saldo_usd: nuevoSaldoUsd })
-    .eq('id', tx.caja_id)
-
-  if (updateCajaError) return { error: updateCajaError.message }
-
-  const { error: softDeleteError } = await supabase
-    .from('transacciones')
-    .update({ eliminado_en: new Date().toISOString(), eliminado_por: user.id })
-    .eq('id', transaccion_id)
-
-  if (softDeleteError) return { error: softDeleteError.message }
 
   revalidatePath('/dashboard')
   return { success: true }

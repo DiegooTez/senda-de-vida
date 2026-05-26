@@ -40,6 +40,7 @@ export async function proxy(request: NextRequest) {
       .from('usuarios_permitidos')
       .select('id')
       .eq('email', (user.email ?? '').toLowerCase())
+      .eq('activo', true)
       .maybeSingle()
     isWhitelisted = !!data
   }

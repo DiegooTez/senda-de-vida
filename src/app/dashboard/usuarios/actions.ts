@@ -20,15 +20,15 @@ export async function cambiarRol(
 
   const { data: perfilCaller } = await supabase
     .from('profiles')
-    .select('role')
+    .select('rol')
     .eq('id', user.id)
     .single()
 
-  if (perfilCaller?.role !== 'admin') return { error: 'Sin permisos de administrador' }
+  if (perfilCaller?.rol !== 'admin') return { error: 'Sin permisos de administrador' }
 
   const { error } = await supabase
     .from('profiles')
-    .update({ role: nuevoRol })
+    .update({ rol: nuevoRol })
     .eq('id', userId)
 
   if (error) return { error: error.message }
@@ -52,10 +52,10 @@ export async function agregarPermiso(
 
   const { data: perfil } = await supabase
     .from('profiles')
-    .select('role')
+    .select('rol')
     .eq('id', user.id)
     .single()
-  if (perfil?.role !== 'admin') return { error: 'Sin permisos de administrador' }
+  if (perfil?.rol !== 'admin') return { error: 'Sin permisos de administrador' }
 
   const { error } = await supabase
     .from('usuarios_permitidos')
@@ -82,10 +82,10 @@ export async function eliminarPermiso(formData: FormData): Promise<void> {
 
   const { data: perfil } = await supabase
     .from('profiles')
-    .select('role')
+    .select('rol')
     .eq('id', user.id)
     .single()
-  if (perfil?.role !== 'admin') return
+  if (perfil?.rol !== 'admin') return
 
   await supabase.from('usuarios_permitidos').delete().eq('id', id)
   revalidatePath('/dashboard/usuarios')

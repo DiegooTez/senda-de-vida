@@ -8,7 +8,16 @@ type Perfil = {
   id: string
   email: string | null
   full_name: string | null
-  role: string | null
+  rol: string | null
+}
+
+function Avatar({ name }: { name: string }) {
+  const initial = name.charAt(0).toUpperCase()
+  return (
+    <div className="w-9 h-9 rounded-full bg-navy/10 text-navy flex items-center justify-center font-bold text-sm flex-shrink-0">
+      {initial}
+    </div>
+  )
 }
 
 export default async function UsuariosPage() {
@@ -22,14 +31,14 @@ export default async function UsuariosPage() {
 
   const { data: perfilActual } = await supabase
     .from('profiles')
-    .select('role')
+    .select('rol')
     .eq('id', user.id)
     .single()
 
-  if (perfilActual?.role !== 'admin') redirect('/dashboard')
+  if (perfilActual?.rol !== 'admin') redirect('/dashboard')
 
   const [{ data: perfiles, error: perfilesError }, { data: permisos }] = await Promise.all([
-    supabase.from('profiles').select('id, email, full_name, role').order('email'),
+    supabase.from('profiles').select('id, email, full_name, rol').order('email'),
     supabase.from('usuarios_permitidos').select('id, email').order('creado_at', { ascending: true }),
   ])
 
@@ -41,63 +50,70 @@ export default async function UsuariosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Image
-                src="/logo.jpeg"
-                alt="Senda de Vida"
-                width={32}
-                height={32}
-                className="rounded-lg object-contain"
-              />
-              <span className="text-xl font-bold text-slate-800">Senda de Vida</span>
-            </div>
-            <nav className="flex items-center gap-1">
-              <a
-                href="/dashboard"
-                className="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                Dashboard
-              </a>
-              <a
-                href="/dashboard/usuarios"
-                className="px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg"
-              >
-                Usuarios
-              </a>
-            </nav>
+    <div className="min-h-screen bg-slate-100">
+      {/* ── Header navy ─────────────────────────────────── */}
+      <div className="bg-gradient-to-br from-navy-dark via-navy to-navy-mid">
+        <header className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/logo.jpeg"
+              alt="Senda de Vida"
+              width={36}
+              height={36}
+              className="rounded-lg object-contain flex-shrink-0"
+            />
+            <h1 className="text-white font-bold text-lg tracking-tight leading-none">
+              Senda de Vida
+            </h1>
           </div>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-            >
-              Cerrar sesión
-            </button>
-          </form>
-        </div>
-      </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-800">Gestión de usuarios</h2>
-          <p className="mt-1 text-slate-500 text-sm">
+          <div className="flex items-center gap-1">
+            <a
+              href="/dashboard"
+              className="text-blue-200 hover:text-white text-sm px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              Dashboard
+            </a>
+            <a
+              href="/dashboard/usuarios"
+              className="text-white text-sm px-3 py-1.5 rounded-lg bg-white/15 font-medium"
+            >
+              Usuarios
+            </a>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="text-blue-200 hover:text-white text-sm px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                Salir
+              </button>
+            </form>
+          </div>
+        </header>
+
+        <div className="max-w-5xl mx-auto px-4 pt-1 pb-10">
+          <p className="text-blue-300 text-[11px] font-bold uppercase tracking-widest mb-1">
+            Administración
+          </p>
+          <h2 className="text-white text-2xl font-bold">Gestión de usuarios</h2>
+          <p className="text-blue-200 text-sm mt-1">
             {(perfiles ?? []).length} usuario{(perfiles ?? []).length !== 1 ? 's' : ''} registrado{(perfiles ?? []).length !== 1 ? 's' : ''}
           </p>
         </div>
+      </div>
 
+      {/* ── Contenido ────────────────────────────────────── */}
+      <main className="max-w-5xl mx-auto px-4 -mt-4 pb-12 space-y-6">
         {perfilesError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
             Error al cargar usuarios: {perfilesError.message}
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        {/* Tabla de usuarios */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
           {(perfiles ?? []).length === 0 ? (
-            <div className="py-16 text-center">
+            <div className="py-14 text-center">
               <p className="text-slate-400 text-sm">No hay usuarios registrados</p>
             </div>
           ) : (
@@ -105,42 +121,43 @@ export default async function UsuariosPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50">
-                    <th className="px-5 py-3 text-left font-semibold text-slate-600">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
                       Usuario
                     </th>
-                    <th className="px-5 py-3 text-left font-semibold text-slate-600">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">
                       Email
                     </th>
-                    <th className="px-5 py-3 text-left font-semibold text-slate-600">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
                       Rol
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-50">
                   {(perfiles as Perfil[]).map((perfil) => (
                     <tr
                       key={perfil.id}
-                      className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors"
+                      className="hover:bg-slate-50/70 transition-colors"
                     >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-semibold text-xs flex-shrink-0">
-                            {(perfil.full_name ?? perfil.email ?? '?')
-                              .charAt(0)
-                              .toUpperCase()}
+                          <Avatar name={perfil.full_name ?? perfil.email ?? '?'} />
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-800 truncate">
+                              {perfil.full_name ?? '—'}
+                            </p>
+                            <p className="text-xs text-slate-400 truncate sm:hidden">
+                              {perfil.email ?? ''}
+                            </p>
                           </div>
-                          <span className="font-medium text-slate-800">
-                            {perfil.full_name ?? '—'}
-                          </span>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-slate-600">
+                      <td className="px-5 py-4 text-slate-500 hidden sm:table-cell">
                         {perfil.email ?? '—'}
                       </td>
                       <td className="px-5 py-4">
                         <RolSelector
                           userId={perfil.id}
-                          rolActual={perfil.role ?? 'user'}
+                          rolActual={perfil.rol ?? 'user'}
                           esPropioUsuario={perfil.id === user.id}
                         />
                       </td>
@@ -151,11 +168,16 @@ export default async function UsuariosPage() {
             </div>
           )}
         </div>
-        <div className="mt-10">
+
+        {/* Lista blanca */}
+        <div>
           <div className="mb-4">
-            <h2 className="text-2xl font-bold text-slate-800">Lista blanca de acceso</h2>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
+              Acceso
+            </p>
+            <h3 className="text-xl font-bold text-slate-800">Lista blanca</h3>
             <p className="mt-1 text-slate-500 text-sm">
-              Solo pueden ingresar a la app los correos que estén en esta lista.
+              Solo pueden ingresar los correos habilitados en esta lista.
             </p>
           </div>
           <PermisoManager permisos={permisos ?? []} />

@@ -1,9 +1,8 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { EditarTransaccionModal } from './EditarTransaccionModal'
-import { eliminarTransaccion, type EliminarTransaccionState } from './actions'
 
 type Caja = { id: string; nombre: string }
 type Categoria = { id: string; nombre: string; tipo?: string | null; caja_tipo?: string | null }
@@ -14,6 +13,7 @@ type Row = {
   moneda: 'ARS' | 'USD'
   monto: number
   descripcion: string | null
+  descripcion_custom: string | null
   fecha: string
   caja_id: string
   categoria_id: string | null
@@ -22,47 +22,14 @@ type Row = {
   categoriaNombre: string | null
 }
 
-function EliminarForm({
-  transaccionId,
-  onCancel,
-}: {
-  transaccionId: string
-  onCancel: () => void
-}) {
-  const [state, action, pending] = useActionState<EliminarTransaccionState, FormData>(
-    eliminarTransaccion,
-    {}
-  )
-  return (
-    <div className="flex items-center gap-1 flex-wrap">
-      {state.error ? (
-        <span className="text-xs text-red-500">{state.error}</span>
-      ) : (
-        <span className="text-xs text-slate-500">¿Eliminar?</span>
-      )}
-      <form action={action}>
-        <input type="hidden" name="transaccion_id" value={transaccionId} />
-        <button
-          type="submit"
-          disabled={pending}
-          className="px-2.5 py-1 text-xs bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white rounded-lg transition-colors cursor-pointer font-medium"
-        >
-          {pending ? '...' : 'Sí'}
-        </button>
-      </form>
-      <button
-        onClick={onCancel}
-        className="px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-slate-200"
-      >
-        No
-      </button>
-    </div>
-  )
-}
-
 function formatFecha(fecha: string) {
   const [year, month, day] = fecha.split('-')
   return `${day}/${month}/${year}`
+}
+
+function formatFechaCorta(fecha: string) {
+  const [, month, day] = fecha.split('-')
+  return `${day}/${month}`
 }
 
 function formatMonto(monto: number, moneda: 'ARS' | 'USD') {
@@ -72,6 +39,40 @@ function formatMonto(monto: number, moneda: 'ARS' | 'USD') {
     minimumFractionDigits: 2,
   }).format(monto)
 }
+
+/* ── Íconos de flecha ─────────────────────────────────────── */
+function IconIngreso() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+      <path
+        fillRule="evenodd"
+        d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L11 6.414V13a1 1 0 11-2 0V6.414L7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3z"
+        clipRule="evenodd"
+      />
+    </svg>
+  )
+}
+function IconEgreso() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+      <path
+        fillRule="evenodd"
+        d="M10 17a1 1 0 01-.707-.293l-3-3a1 1 0 011.414-1.414L9 13.586V7a1 1 0 112 0v6.586l1.293-1.293a1 1 0 011.414 1.414l-3 3A1 1 0 0110 17z"
+        clipRule="evenodd"
+      />
+    </svg>
+  )
+}
+function IconEditar() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+    </svg>
+  )
+}
+
+const selectClass =
+  'text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'
 
 export function TransaccionesHistorial({
   rows,
@@ -89,7 +90,6 @@ export function TransaccionesHistorial({
   const [filtroTipo, setFiltroTipo] = useState<string>('all')
   const [filtroMoneda, setFiltroMoneda] = useState<string>('all')
   const [editando, setEditando] = useState<Row | null>(null)
-  const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
 
   const rowsFiltradas = rows.filter((r) => {
     if (filtroCaja !== 'all' && r.caja_id !== filtroCaja) return false
@@ -100,40 +100,75 @@ export function TransaccionesHistorial({
 
   return (
     <section>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-        <h3 className="text-base font-semibold text-slate-500 uppercase tracking-wide">
-          Transacciones
-        </h3>
+      {/* ── Encabezado y filtros ───────────────────────────── */}
+      <div className="flex flex-col gap-3 mb-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+            Movimientos
+          </h3>
+          {rowsFiltradas.length > 0 && (
+            <span className="text-xs text-slate-400">{rowsFiltradas.length} registros</span>
+          )}
+        </div>
 
-        <div className="flex flex-wrap gap-2">
-          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2 py-1">
-            <span className="text-xs text-slate-400 mr-1">Caja:</span>
-            <button
-              onClick={() => setFiltroCaja('all')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                filtroCaja === 'all'
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              Todas
-            </button>
+        {/* Filtros móvil: selects compactos */}
+        <div className="flex gap-2 sm:hidden">
+          <select
+            value={filtroCaja}
+            onChange={(e) => setFiltroCaja(e.target.value)}
+            className={`flex-1 ${selectClass}`}
+          >
+            <option value="all">Todas las cajas</option>
             {cajas.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setFiltroCaja(c.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  filtroCaja === c.id
-                    ? 'bg-slate-800 text-white'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
+              <option key={c.id} value={c.id}>
                 {c.nombre}
-              </button>
+              </option>
             ))}
+          </select>
+          <select
+            value={filtroTipo}
+            onChange={(e) => setFiltroTipo(e.target.value)}
+            className={selectClass}
+          >
+            <option value="all">Todos</option>
+            <option value="ingreso">Ingresos</option>
+            <option value="egreso">Egresos</option>
+          </select>
+          <select
+            value={filtroMoneda}
+            onChange={(e) => setFiltroMoneda(e.target.value)}
+            className={selectClass}
+          >
+            <option value="all">$</option>
+            <option value="ARS">ARS</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+
+        {/* Filtros desktop: pill buttons */}
+        <div className="hidden sm:flex flex-wrap gap-2">
+          {/* Caja */}
+          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-sm">
+            <span className="text-xs text-slate-400 mr-1">Caja:</span>
+            {[{ value: 'all', label: 'Todas' }, ...cajas.map((c) => ({ value: c.id, label: c.nombre }))].map(
+              ({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setFiltroCaja(value)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                    filtroCaja === value
+                      ? 'bg-navy text-white'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {label}
+                </button>
+              )
+            )}
           </div>
 
-          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2 py-1">
+          {/* Tipo */}
+          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-sm">
             <span className="text-xs text-slate-400 mr-1">Tipo:</span>
             {(
               [
@@ -147,7 +182,7 @@ export function TransaccionesHistorial({
                 onClick={() => setFiltroTipo(value)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   filtroTipo === value
-                    ? 'bg-slate-800 text-white'
+                    ? 'bg-navy text-white'
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
@@ -156,7 +191,8 @@ export function TransaccionesHistorial({
             ))}
           </div>
 
-          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2 py-1">
+          {/* Moneda */}
+          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-sm">
             <span className="text-xs text-slate-400 mr-1">Moneda:</span>
             {(
               [
@@ -170,7 +206,7 @@ export function TransaccionesHistorial({
                 onClick={() => setFiltroMoneda(value)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   filtroMoneda === value
-                    ? 'bg-slate-800 text-white'
+                    ? 'bg-navy text-white'
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
@@ -181,85 +217,171 @@ export function TransaccionesHistorial({
         </div>
       </div>
 
-      {rowsFiltradas.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 py-16 text-center">
+      {/* ── Sin resultados ────────────────────────────────── */}
+      {rowsFiltradas.length === 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 py-14 text-center shadow-sm">
           <p className="text-slate-400 text-sm">
-            No hay transacciones para los filtros seleccionados
+            No hay movimientos para los filtros seleccionados.
           </p>
         </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+      )}
+
+      {/* ── Vista MÓVIL: lista de cards ───────────────────── */}
+      {rowsFiltradas.length > 0 && (
+        <div className="space-y-2 sm:hidden">
+          {rowsFiltradas.map((t) => {
+            const esIngreso = t.tipo === 'ingreso'
+            const titulo = t.descripcion ?? t.categoriaNombre ?? 'Sin descripción'
+            return (
+              <div
+                key={t.id}
+                className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3 flex items-center gap-3"
+              >
+                {/* Ícono */}
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    esIngreso
+                      ? 'bg-emerald-100 text-emerald-600'
+                      : 'bg-red-100 text-red-500'
+                  }`}
+                >
+                  {esIngreso ? <IconIngreso /> : <IconEgreso />}
+                </div>
+
+                {/* Contenido */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-slate-800 text-sm truncate leading-snug">
+                      {titulo}
+                    </p>
+                    <p
+                      className={`font-bold text-sm tabular-nums shrink-0 ${
+                        esIngreso ? 'text-emerald-600' : 'text-red-500'
+                      }`}
+                    >
+                      {esIngreso ? '+' : '−'}
+                      {formatMonto(t.monto, t.moneda)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                    {t.cajaNombre && (
+                      <span className="text-xs text-slate-400">{t.cajaNombre}</span>
+                    )}
+                    {t.categoriaNombre && t.descripcion && (
+                      <>
+                        <span className="text-slate-300 text-xs">·</span>
+                        <span className="text-xs text-slate-400">{t.categoriaNombre}</span>
+                      </>
+                    )}
+                    <span className="text-slate-300 text-xs">·</span>
+                    <span className="text-xs text-slate-400">{formatFechaCorta(t.fecha)}</span>
+                  </div>
+
+                  {t.descripcion_custom && (
+                    <p className="text-xs text-slate-400 italic mt-0.5 truncate">
+                      {t.descripcion_custom}
+                    </p>
+                  )}
+                </div>
+
+                {/* Editar (admin) */}
+                {esAdmin && (
+                  <button
+                    onClick={() => setEditando(t)}
+                    className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer flex-shrink-0"
+                    aria-label="Editar"
+                  >
+                    <IconEditar />
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── Vista DESKTOP: tabla ─────────────────────────── */}
+      {rowsFiltradas.length > 0 && (
+        <div className="hidden sm:block bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 text-xs uppercase tracking-wide whitespace-nowrap">
                     Fecha
                   </th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Caja</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Categoría</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Tipo</th>
-                  <th className="px-4 py-3 text-right font-semibold text-slate-600">Monto</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Descripción</th>
-                  {esAdmin && <th className="px-4 py-3" />}
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    Caja
+                  </th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    Categoría
+                  </th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    Tipo
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    Monto
+                  </th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    Descripción
+                  </th>
+                  {esAdmin && <th className="px-4 py-3 w-16" />}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-50">
                 {rowsFiltradas.map((t) => (
                   <tr
                     key={t.id}
-                    className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors"
+                    className="hover:bg-slate-50/70 transition-colors"
                   >
-                    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                    <td className="px-4 py-3 text-slate-500 whitespace-nowrap text-xs">
                       {formatFecha(t.fecha)}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{t.cajaNombre ?? '—'}</td>
-                    <td className="px-4 py-3 text-slate-700">{t.categoriaNombre ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-700 text-sm">{t.cajaNombre ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-600 text-sm">{t.categoriaNombre ?? '—'}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
                           t.tipo === 'ingreso'
                             ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-red-100 text-red-700'
+                            : 'bg-red-100 text-red-600'
                         }`}
                       >
+                        {t.tipo === 'ingreso' ? <IconIngreso /> : <IconEgreso />}
                         {t.tipo === 'ingreso' ? 'Ingreso' : 'Egreso'}
                       </span>
                     </td>
                     <td
-                      className={`px-4 py-3 text-right font-semibold tabular-nums whitespace-nowrap ${
-                        t.tipo === 'ingreso' ? 'text-emerald-600' : 'text-red-600'
+                      className={`px-4 py-3 text-right font-bold tabular-nums whitespace-nowrap ${
+                        t.tipo === 'ingreso' ? 'text-emerald-600' : 'text-red-500'
                       }`}
                     >
                       {t.tipo === 'ingreso' ? '+' : '−'}
                       {formatMonto(t.monto, t.moneda)}
                     </td>
-                    <td className="px-4 py-3 text-slate-500 max-w-xs truncate">
-                      {t.descripcion ?? '—'}
+                    <td className="px-4 py-3 text-slate-500 max-w-xs text-sm">
+                      {t.descripcion && (
+                        <div className="truncate">{t.descripcion}</div>
+                      )}
+                      {t.descripcion_custom && (
+                        <div className="text-xs text-slate-400 truncate mt-0.5 italic">
+                          {t.descripcion_custom}
+                        </div>
+                      )}
+                      {!t.descripcion && !t.descripcion_custom && (
+                        <span className="text-slate-300">—</span>
+                      )}
                     </td>
                     {esAdmin && (
                       <td className="px-4 py-3">
-                        {confirmandoId === t.id ? (
-                          <EliminarForm
-                            transaccionId={t.id}
-                            onCancel={() => setConfirmandoId(null)}
-                          />
-                        ) : (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => setEditando(t)}
-                              className="px-2.5 py-1 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-slate-200"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => setConfirmandoId(t.id)}
-                              className="px-2.5 py-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer border border-red-200"
-                            >
-                              Eliminar
-                            </button>
-                          </div>
-                        )}
+                        <button
+                          onClick={() => setEditando(t)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-slate-200"
+                        >
+                          <IconEditar />
+                          Editar
+                        </button>
                       </td>
                     )}
                   </tr>
@@ -270,6 +392,7 @@ export function TransaccionesHistorial({
         </div>
       )}
 
+      {/* ── Modal edición ─────────────────────────────────── */}
       {editando && (
         <EditarTransaccionModal
           key={editando.id}

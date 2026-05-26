@@ -33,6 +33,7 @@ export default async function RegistroPage({
       .from('usuarios_permitidos')
       .select('id')
       .eq('email', email)
+      .eq('activo', true)
       .maybeSingle()
 
     if (!permitido) {
