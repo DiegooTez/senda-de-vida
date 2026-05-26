@@ -34,9 +34,15 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
 
   // Check whitelist once for routes that need it
+  // Use service-role client to bypass RLS on usuarios_permitidos
   let isWhitelisted: boolean | null = null
   if (user && (path.startsWith('/dashboard') || path === '/login' || path === '/registro')) {
-    const { data } = await supabase
+    const adminSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { cookies: { getAll: () => [], setAll: () => {} } }
+    )
+    const { data } = await adminSupabase
       .from('usuarios_permitidos')
       .select('id')
       .eq('email', (user.email ?? '').toLowerCase())
